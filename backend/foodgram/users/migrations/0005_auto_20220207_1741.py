@@ -6,16 +6,16 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0004_auto_20220207_1738'),
+        ("users", "0004_auto_20220207_1738"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='user',
-            options={'verbose_name': 'user', 'verbose_name_plural': 'users'},
+            name="user",
+            options={"verbose_name": "user", "verbose_name_plural": "users"},
         ),
         migrations.RemoveConstraint(
-            model_name='user',
-            name='unique_email_username',
+            model_name="user",
+            name="unique_email_username",
         ),
     ]

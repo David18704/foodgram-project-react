@@ -6,19 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('recipe', '0001_initial'),
+        ("recipe", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='ingredient',
-            name='amount',
+            model_name="ingredient",
+            name="amount",
             field=models.PositiveSmallIntegerField(blank=True, default=1),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='ingredientrecipe',
-            name='amount',
+            model_name="ingredientrecipe",
+            name="amount",
             field=models.PositiveSmallIntegerField(blank=True),
         ),
     ]
