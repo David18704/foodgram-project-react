@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .models import User
-from recipe.models import (
+from .models import (
     Tag,
     Ingredient,
     IngredientRecipe,
@@ -23,13 +23,23 @@ class UserAdmin(admin.ModelAdmin):
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         "name",
-        "favorite_count",
+        "author",
     )
     list_filter = (
         "name",
         "tags",
         "author",
     )
+    fields = (
+        "author",
+        "name",
+        "image",
+        "text",
+        "tags",
+        "cooking_time",
+        "favorite_count",
+    )
+    readonly_fields = ("favorite_count",)
 
     def favorite_count(self, obj):
         return Favorite.objects.count()

@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-from django.db.models import Avg
+from django.db.models import Count
 from rest_framework import status, viewsets, filters
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -36,6 +36,7 @@ from .serializers import (
     ShoppingCartSerializer,
 )
 from .filters import RecipeFilter
+from .pagination import FoodgrampPagination
 from recipe.models import Tag, Ingredient, Recipe, Favorite, ShoppingCart, Follow
 
 User = get_user_model()
@@ -67,7 +68,7 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (AllowAny,)
 
     def get_queryset(self):
-        queryset = User.objects.all().annotate(
+        queryset = User.objects.annotate(
             is_subscribed=Exists(
                 Follow.objects.filter(author=self.request.user, user__pk=OuterRef("pk"))
             )
@@ -93,7 +94,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
-        methods=["POST", "DELETE"],
+        methods=["POST"],
         permission_classes=[
             IsAuthenticated,
         ],
@@ -113,13 +114,17 @@ class UserViewSet(viewsets.ModelViewSet):
                 data = UserSerializer(author, context={"request": request}).data
                 return Response(data, status=status.HTTP_201_CREATED)
             return Response({"errors": "Ошибка"}, status=status.HTTP_400_BAD_REQUEST)
-        if request.method == "DELETE":
-            if Follow.objects.filter(user=user, author=author).exists() is False:
-                return Response(
-                    {"errors": "Объект не найден"}, status=status.HTTP_404_NOT_FOUND
-                )
-            Follow.objects.filter(user=user, author=author).delete()
-            return Response("Успешная отписка", status=status.HTTP_204_NO_CONTENT)
+
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, pk):
+        author = get_object_or_404(User, pk=pk)
+        user = request.user
+        if Follow.objects.filter(user=user, author=author).exists() is False:
+            return Response(
+                {"errors": "Объект не найден"}, status=status.HTTP_404_NOT_FOUND
+            )
+        Follow.objects.filter(user=user, author=author).delete()
+        return Response("Успешная отписка", status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
@@ -133,7 +138,11 @@ class UserViewSet(viewsets.ModelViewSet):
         user = request.user
         user = get_object_or_404(User, username=user.username)
         subscriptions = Follow.objects.filter(user=request.user)
-        data = FollowUserSerializer(subscriptions, many=True).data
+        annotateed_subscriptions = subscriptions.annotate(
+            recipes_count=Count("author__recipes"),
+            is_subscribed=Count("author__follower"),
+        )
+        data = FollowUserSerializer(annotateed_subscriptions, many=True).data
         return Response(data, status=status.HTTP_200_OK)
 
     @action(
@@ -156,13 +165,14 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
 
+    pagination_class = FoodgrampPagination
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
     filterset_fields = ("author", "tags__slug", "favorite", "shopping_cart")
     filterset_class = RecipeFilter
     ordering_fields = "pk"
 
     def get_queryset(self):
-        queryset = Recipe.objects.all().annotate(
+        queryset = Recipe.objects.annotate(
             is_favorited=Exists(
                 Favorite.objects.filter(
                     user=self.request.user, recipe__pk=OuterRef("pk")

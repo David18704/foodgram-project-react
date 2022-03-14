@@ -12,6 +12,9 @@ class Tag(models.Model):
     def __str__(self):
         return f"{self.name}, {self.slug}"
 
+    class Meta:
+        verbose_name = "Тэг"
+
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=256, verbose_name="Название ингридиента")
@@ -20,6 +23,9 @@ class Ingredient(models.Model):
 
     def __str__(self):
         return f"{self.name}, {self.measurement_unit}"
+
+    class Meta:
+        verbose_name = "Ингредиент"
 
 
 class Recipe(models.Model):
@@ -45,6 +51,9 @@ class Recipe(models.Model):
         verbose_name="Время приготовления в минутах",
     )
 
+    class Meta:
+        verbose_name = "Рецепт"
+
 
 class IngredientRecipe(models.Model):
     ingredient = models.ForeignKey(
@@ -60,6 +69,9 @@ class IngredientRecipe(models.Model):
         related_name="ingredient_recipe",
     )
     amount = models.PositiveSmallIntegerField(blank=True, verbose_name="Количество")
+
+    class Meta:
+        verbose_name = "Ингредиент для рецепта"
 
 
 class ShoppingCart(models.Model):
@@ -77,6 +89,7 @@ class ShoppingCart(models.Model):
     )
 
     class Meta:
+        verbose_name = "Список покупок"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "recipe"], name="unique_shopping_cart"
@@ -99,6 +112,7 @@ class Favorite(models.Model):
     )
 
     class Meta:
+        verbose_name = "Избранное"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "recipe"], name="unique_shopping_list"
@@ -118,6 +132,7 @@ class Follow(models.Model):
     )
 
     class Meta:
+        verbose_name = "Подписки"
         constraints = [
             models.UniqueConstraint(fields=["user", "author"], name="unique_follow")
         ]

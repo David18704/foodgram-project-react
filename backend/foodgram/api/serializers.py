@@ -129,19 +129,28 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             "image",
         )
 
-    def validate(self, data):
-        if data["cooking_time"] <= 0:
-            raise serializers.ValidationError("Ошибка")
-        return data
+    def validate_cooking_time(self, value):
+        if value <= 0:
+            raise serializers.ValidationError(
+                "Время приготовления  блюда задано неверно"
+            )
+        return value
 
     def create(self, validated_data):
         ingredients = validated_data.pop("ingredients")
         tags = validated_data.pop("tags")
-        recipe = Recipe.objects.create(**validated_data)
+        recipe = super().create(validated_data)
         for tag in tags:
             recipe.tags.add(tag)
         for ingredient in ingredients:
-            first_ingredient = get_object_or_404(Ingredient, id=ingredient["id"])
+            first_ingredient = Ingredient.objects.get(id=ingredient["id"])
+            if IngredientRecipe.objects.filter(
+                ingredient=first_ingredient,
+                recipe=recipe,
+            ).exists():
+                raise serializers.ValidationError(
+                    "Внимание, данный ингридиент уже возможно присутствует в рецепте"
+                )
             IngredientRecipe.objects.create(
                 recipe=recipe, ingredient=first_ingredient, amount=ingredient["amount"]
             )
@@ -159,8 +168,15 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             for ingredient in ingredients:
                 ingredient_id = ingredient["id"]
                 amount = ingredient["amount"]
-                new_ingredient = get_object_or_404(Ingredient, id=ingredient_id)
-                ingredients_recipe = IngredientRecipe.objects.create(
+                new_ingredient = Ingredient.objects.get(id=ingredient["id"])
+                if IngredientRecipe.objects.filter(
+                    ingredient=new_ingredient,
+                    recipe=instance,
+                ).exists():
+                    raise serializers.ValidationError(
+                        "Внимание, данный ингридиент уже возможно присутствует в рецепте"
+                    )
+                IngredientRecipe.objects.create(
                     recipe=instance, ingredient=new_ingredient, amount=amount
                 )
                 instance.ingredients.add(new_ingredient)
@@ -203,9 +219,9 @@ class FollowUserSerializer(serializers.ModelSerializer):
     id = serializers.CharField(source="author.id")
     first_name = serializers.CharField(source="author.first_name")
     last_name = serializers.CharField(source="author.last_name")
-    is_subscribed = serializers.SerializerMethodField()
+    is_subscribed = serializers.BooleanField(read_only=True)
     email = serializers.CharField(source="author.email")
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = User
@@ -219,14 +235,6 @@ class FollowUserSerializer(serializers.ModelSerializer):
             "recipes",
             "recipes_count",
         )
-
-    def get_is_subscribed(self, obj):
-        if obj.author.follower.exists():
-            return True
-        return False
-
-    def get_recipes_count(self, obj):
-        return obj.author.recipes.count()
 
 
 class FollowSerializer(serializers.ModelSerializer):
