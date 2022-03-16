@@ -12,7 +12,7 @@ services:
     image: david1870/foodgram:latest
     restart: always
     volumes:
-      - static_value:/backend/static-backend/
+      - static_value:/backend/static/
       - media_value:/backend/media/
     depends_on:
       - db
